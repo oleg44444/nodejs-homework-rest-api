@@ -25,15 +25,10 @@ const register = async (req, res) => {
 const login = async (req, res) => {
   const { email, password } = req.body;
   const user = await User.findOne({ email });
-
-  if (!user) {
-    throw HttpError(401, "Email or password invalid");
-  }
-
   const passwordCompare = await bcrypt.compare(password, user.password);
 
-  if (!passwordCompare) {
-    throw HttpError(401, "Email or password is wrong");
+  if (!user || !passwordCompare) {
+    throw HttpError(401, "Email or password invalid");
   }
 
   const payload = {
@@ -46,6 +41,7 @@ const login = async (req, res) => {
     token,
   });
 };
+
 const getCurrent = async (req, res) => {
   const { email, name } = req.user;
   res.json({
@@ -63,28 +59,12 @@ const logout = async (req, res) => {
 };
 
 const updateSubscription = async (req, res) => {
-  try {
-    const { subscription } = req.body;
-
-    if (!["starter", "pro", "business"].includes(subscription)) {
-      return res.status(400).json({ message: "Invalid subscription value" });
-    }
-
-    const user = await User.findById(req.user._id);
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    user.subscription = subscription;
-    await user.save();
-
-    res
-      .status(200)
-      .json({ message: "Subscription updated successfully", user });
-  } catch (error) {
-    res.status(500).json({ message: "Internal Server Error" });
-  }
+  const { _id, name } = req.user;
+  const { subscription } = req.body;
+  await User.findByIdAndUpdate(_id, { subscription });
+  res.json({
+    message: `User ${name} changed subscription to - ${subscription}`,
+  });
 };
 
 module.exports = {
